@@ -1,0 +1,12 @@
+corpus/
+node_modules/
+dist/
+.phase-status.json
+
+# Android
+android/app/src/main/assets/web/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.apk

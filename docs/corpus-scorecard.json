@@ -1,0 +1,66 @@
+{
+  "generatedAt": "2026-07-22T02:15:11.563Z",
+  "minRealSample": 15,
+  "realCount": 0,
+  "dod": {
+    "pdf": {
+      "rule": "정상 100%",
+      "n": 0,
+      "ok": 0
+    },
+    "docx": {
+      "rule": "읽을수있음 ≥90%",
+      "n": 0,
+      "ok": 0
+    },
+    "status": "UNVERIFIED (real 코퍼스 < 15)"
+  },
+  "fixtureRegression": {
+    "n": 2,
+    "ok": 2
+  },
+  "rows": [
+    {
+      "file": "js.pdf",
+      "tag": "fixture",
+      "kind": "pdf",
+      "grade": "readable",
+      "note": "1p, text 16자"
+    },
+    {
+      "file": "sample.docx",
+      "tag": "fixture",
+      "kind": "docx",
+      "grade": "readable",
+      "note": "23자"
+    },
+    {
+      "file": "sample.hwp",
+      "tag": "fixture",
+      "kind": "hwp",
+      "grade": "readable",
+      "note": "11자"
+    },
+    {
+      "file": "sample.hwpx",
+      "tag": "fixture",
+      "kind": "hwp",
+      "grade": "readable",
+      "note": "17자"
+    },
+    {
+      "file": "sample.pdf",
+      "tag": "fixture",
+      "kind": "pdf",
+      "grade": "readable",
+      "note": "1p, text 16자"
+    },
+    {
+      "file": "sample.pptx",
+      "tag": "fixture",
+      "kind": "pptx",
+      "grade": "readable",
+      "note": "21자"
+    }
+  ]
+}

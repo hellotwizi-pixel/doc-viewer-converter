@@ -1,0 +1,33 @@
+{
+  "name": "doc-viewer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "편집 불가 문서 뷰어 (PDF/DOCX) — 순수 클라이언트 설치형 PWA",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "corpus:score": "tsx scripts/corpus-score.ts",
+    "corpus:gen": "tsx scripts/gen-fixtures.ts"
+  },
+  "dependencies": {
+    "dompurify": "^3.2.4",
+    "mammoth": "^1.9.0",
+    "pdfjs-dist": "^4.10.38"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@types/dompurify": "^3.0.5",
+    "@types/jsdom": "^28.0.3",
+    "@types/node": "^22.20.1",
+    "jsdom": "^26.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.11",
+    "vitest": "^3.0.5"
+  }
+}
