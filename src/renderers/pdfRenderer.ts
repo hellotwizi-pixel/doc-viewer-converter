@@ -4,11 +4,25 @@
  * 파싱/텍스트레이어 로직은 jsdom 단위테스트, 픽셀 렌더는 Playwright(실브라우저)에서 검증.
  */
 import * as pdfjs from "pdfjs-dist";
-// Vite: 워커를 URL로 번들
-import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { toViewerError, ViewerError } from "../core/errors.ts";
 
-pdfjs.GlobalWorkerOptions.workerSrc = PdfWorker;
+// Vite 환경에서 워커 초기화
+const initWorker = () => {
+  // import.meta.env.MODE: 'development' | 'production'
+  const isDev = import.meta.env.MODE === "development";
+  const workerFile = isDev ? "pdf.worker.mjs" : "pdf.worker.min.mjs";
+
+  // public 폴더의 워커 파일을 직접 참조
+  // vite.config의 base: "./" 설정과 함께 작동
+  try {
+    pdfjs.GlobalWorkerOptions.workerSrc = `${import.meta.env.BASE_URL}${workerFile}`;
+  } catch {
+    // fallback: 절대경로로 시도
+    pdfjs.GlobalWorkerOptions.workerSrc = `/${workerFile}`;
+  }
+};
+
+initWorker();
 
 export interface LoadedPdf {
   numPages: number;
