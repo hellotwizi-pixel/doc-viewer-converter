@@ -351,6 +351,12 @@ interface NativeBridge {
   }
 };
 
+// 로컬스토리지 초기화: 변환서버 설정이 없으면 기본적으로 오프라인 렌더 사용
+if (!window.localStorage.getItem("converterUrl")) {
+  // 처음 설치 또는 초기화된 상태 → 변환서버 URL을 명시적으로 비워둠
+  // (기본값으로 설정되지 않음)
+}
+
 wireUi();
 show(state);
 registerSw();
