@@ -1,0 +1,7 @@
+{
+  "buildCommand": "cd server && npm install",
+  "outputDirectory": "server",
+  "env": {
+    "PORT": "8080"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "buildCommand": "npm install",
+  "outputDirectory": "./",
+  "env": {
+    "PORT": "8080"
+  },
+  "deploymentProtection": {
+    "enabled": false
+  }
+}
