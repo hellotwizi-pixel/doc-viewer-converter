@@ -19,8 +19,8 @@ export function getConverterUrl(): string {
 
 /** 변환 서버가 다룰 수 있는(=변환 이점이 있는) 확장자. */
 export function shouldConvert(ext: string): boolean {
-  // xlsx는 자체 표 렌더가 더 유용 → 변환 대상에서 제외. 구형 xls는 변환.
-  return ["pptx", "ppt", "hwp", "hwpx", "doc", "xls"].includes(ext);
+  // Excel/PPT/한글은 PDF로 변환하면 원본 레이아웃 그대로 한 장에 표시 가능
+  return ["pptx", "ppt", "hwp", "hwpx", "doc", "xls", "xlsx"].includes(ext);
 }
 
 /** 파일을 변환 서버에 보내 PDF ArrayBuffer로 받는다. 실패 시 throw. */
