@@ -2,6 +2,7 @@
  * main — 뷰어 셸 오케스트레이션. 파일 입력 → 라우팅 → 렌더 → 상태 반영.
  * 편집 기능 없음(순수 뷰어). 문서 바이트는 네트워크로 나가지 않는다(egress-0).
  */
+import "./core/polyfills.ts"; // 구형 WebView 대응 — 반드시 첫 import
 import { routeFile, extensionOf } from "./core/router.ts";
 import { getConverterUrl, shouldConvert, convertToPdf } from "./convert/converter.ts";
 import { assertOpenable, toViewerError, userMessage, ViewerError } from "./core/errors.ts";
@@ -20,6 +21,8 @@ const lazyCsv = () => import("./renderers/csvRenderer.ts");
 let state: ViewerState = initialState();
 let currentPdf: LoadedPdf | null = null;
 let lastFile: File | null = null;
+// 네이티브가 inbox에 원본을 갖고 있는 문서의 파일명(저장·공유 때 바이트 왕복을 피한다)
+let nativeInboxName: string | null = null;
 
 function showBusy(text: string): void {
   const b = document.getElementById("busy");
@@ -56,7 +59,9 @@ const views = {
 function show(state: ViewerState): void {
   for (const v of Object.values(views)) v().hidden = true;
   $("close-btn").hidden = state.name !== "viewport";
-  $("pdf-toolbar").hidden = !(state.name === "viewport" && state.kind === "pdf");
+  // 툴바는 문서를 보는 동안 항상 노출(저장·공유 때문). 줌은 PDF일 때만.
+  $("pdf-toolbar").hidden = state.name !== "viewport";
+  $("zoom-controls").hidden = !(state.name === "viewport" && state.kind === "pdf");
   const title = $("doc-title");
   if (state.name === "viewport") {
     title.textContent = ""; // 파일명은 신뢰 불가 → textContent로만 주입
@@ -111,10 +116,10 @@ async function openFile(file: File, forceOffline = false): Promise<void> {
         dispatch({ type: "OPEN", kind: "pdf", filename: name });
         await openPdf(pdf);
         return;
-      } catch (err) {
-        // 변환 서버를 설정했는데 실패 → 조용히 넘기지 않고 원인을 보여준다
-        const reason = err instanceof Error ? err.message : String(err);
-        dispatch({ type: "FAIL", error: new ViewerError("convert_failed", reason), filename: name });
+      } catch {
+        // 변환 서버가 죽어 있어도 문서는 열려야 한다 → 클라이언트 렌더러로 폴백.
+        hideBusy();
+        await openFile(file, true);
         return;
       } finally {
         hideBusy();
@@ -165,6 +170,7 @@ async function openFile(file: File, forceOffline = false): Promise<void> {
     }
   } catch (e) {
     const err = toViewerError(e);
+    console.error("[openFile 실패]", err.kind, err.message, e);
     dispatch({ type: "FAIL", error: err, filename: name });
   }
 }
@@ -218,11 +224,111 @@ function zoomBy(factor: number): void {
   void renderPdf();
 }
 
+/* ── 저장 / 공유 ─────────────────────────────────────────────
+   Android 앱에서는 네이티브 브리지(DocViewerApi)가 처리한다.
+   브라우저/PWA에서는 a[download]로 폴백한다. */
+interface NativeFileApi {
+  /* 네이티브가 원본을 갖고 있을 때(카톡 등으로 열린 문서) — 바이트가 JS를 안 거친다 */
+  saveInbox?(filename: string, mime: string): void;
+  shareInbox?(filename: string, mime: string): void;
+  /* 웹 파일피커로 고른 파일 — base64로 넘긴다 */
+  saveFile?(base64: string, filename: string, mime: string): void;
+  shareFile?(base64: string, filename: string, mime: string): void;
+}
+function nativeApi(): NativeFileApi | null {
+  const api = (window as unknown as { DocViewerApi?: NativeFileApi }).DocViewerApi;
+  return api ?? null;
+}
+
+function toBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const s = String(r.result);
+      const comma = s.indexOf(",");
+      resolve(comma >= 0 ? s.slice(comma + 1) : s);
+    };
+    r.onerror = () => reject(new Error("파일을 읽지 못했습니다"));
+    r.readAsDataURL(file);
+  });
+}
+
+function browserDownload(file: File): void {
+  const url = URL.createObjectURL(file);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = file.name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function saveCurrent(): Promise<void> {
+  const file = lastFile;
+  if (!file) return;
+  const api = nativeApi();
+  // 네이티브가 원본을 갖고 있으면 파일명만 넘긴다(대용량도 안전)
+  if (nativeInboxName && api?.saveInbox) {
+    api.saveInbox(nativeInboxName, file.type || "");
+    return;
+  }
+  if (api?.saveFile) {
+    showBusy("저장 중…");
+    try {
+      api.saveFile(await toBase64(file), file.name, file.type || "");
+    } catch {
+      browserDownload(file);
+    } finally {
+      hideBusy();
+    }
+    return;
+  }
+  browserDownload(file);
+}
+
+async function shareCurrent(): Promise<void> {
+  const file = lastFile;
+  if (!file) return;
+  const api = nativeApi();
+  if (nativeInboxName && api?.shareInbox) {
+    api.shareInbox(nativeInboxName, file.type || "");
+    return;
+  }
+  if (api?.shareFile) {
+    showBusy("공유 준비 중…");
+    try {
+      api.shareFile(await toBase64(file), file.name, file.type || "");
+    } finally {
+      hideBusy();
+    }
+    return;
+  }
+  // 브라우저: Web Share API(파일 지원 시) → 없으면 저장으로 폴백
+  const nav = navigator as Navigator & {
+    canShare?: (d: { files?: File[] }) => boolean;
+    share?: (d: { files?: File[]; title?: string }) => Promise<void>;
+  };
+  if (nav.share && nav.canShare?.({ files: [file] })) {
+    try {
+      await nav.share({ files: [file], title: file.name });
+      return;
+    } catch {
+      /* 사용자가 취소 — 조용히 종료 */
+      return;
+    }
+  }
+  browserDownload(file);
+}
+
 function wireUi(): void {
   const input = $("file-input") as HTMLInputElement;
   input.addEventListener("change", () => {
     const f = input.files?.[0];
-    if (f) void openFile(f);
+    if (f) {
+      nativeInboxName = null; // 사용자가 직접 고른 파일 → 네이티브 원본이 아니다
+      void openFile(f);
+    }
     input.value = "";
   });
 
@@ -241,7 +347,10 @@ function wireUi(): void {
   );
   dz.addEventListener("drop", (e) => {
     const f = (e as DragEvent).dataTransfer?.files?.[0];
-    if (f) void openFile(f);
+    if (f) {
+      nativeInboxName = null;
+      void openFile(f);
+    }
   });
 
   $("close-btn").addEventListener("click", () => dispatch({ type: "CLOSE" }));
@@ -282,10 +391,10 @@ function wireUi(): void {
   // PDF 줌 컨트롤
   $("zoom-in").addEventListener("click", () => zoomBy(1.25));
   $("zoom-out").addEventListener("click", () => zoomBy(1 / 1.25));
-  $("zoom-fit").addEventListener("click", () => {
-    pdfScale = fitScale();
-    void renderPdf();
-  });
+
+  // 저장 / 공유
+  $("download-btn").addEventListener("click", () => void saveCurrent());
+  $("share-btn").addEventListener("click", () => void shareCurrent());
 }
 
 // Share Target(보너스): SW가 stash한 파일을 IndexedDB에서 꺼내 연다.
@@ -336,15 +445,35 @@ function registerSw(): void {
 }
 
 // Android WebView 래퍼가 카톡 "다른 앱으로 열기"로 받은 파일을 넘겨주는 진입점.
-// 네이티브가 파일 바이트를 base64로 주입 → 동일 웹뷰어의 openFile로 연다.
 interface NativeBridge {
+  // 네이티브가 inbox에 둔 원본을 URL로 알려준다(문서 크기와 무관하게 안전).
+  __openFromNativeUrl(url: string, filename: string, mime: string): void;
+  // 구버전 호환: base64 주입.
   __openFromNative(base64: string, filename: string, mime: string): void;
 }
-(window as unknown as NativeBridge).__openFromNative = (base64, filename, mime) => {
+const bridge = window as unknown as NativeBridge;
+
+bridge.__openFromNativeUrl = (url, filename, mime) => {
+  void (async () => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`inbox http ${res.status}`);
+      const blob = await res.blob();
+      const name = filename || "문서";
+      nativeInboxName = name; // 저장·공유는 네이티브 원본을 그대로 쓴다
+      await openFile(new File([blob], name, { type: mime || blob.type || "" }));
+    } catch {
+      /* 무시 — 파일피커로 생존 */
+    }
+  })();
+};
+
+bridge.__openFromNative = (base64, filename, mime) => {
   try {
     const bin = atob(base64);
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    nativeInboxName = null;
     void openFile(new File([bytes], filename || "문서", { type: mime || "" }));
   } catch {
     /* 무시 — 파일피커로 생존 */

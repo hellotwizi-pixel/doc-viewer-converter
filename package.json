@@ -6,7 +6,7 @@
   "description": "편집 불가 문서 뷰어 (PDF/DOCX) — 순수 클라이언트 설치형 PWA",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && node scripts/patch-pdf-worker.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

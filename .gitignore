@@ -13,3 +13,6 @@ android/local.properties
 
 # Hermes 원격 작업용 작업트리 (작업마다 별도 브랜치로 생성됨)
 .worktrees/
+
+# Vercel 로컬 연결 정보
+.vercel

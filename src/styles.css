@@ -46,12 +46,23 @@ body {
 
 .pdf-toolbar {
   position: sticky; top: 0; z-index: 5;
-  display: flex; gap: 8px; align-items: center; justify-content: center;
+  display: flex; gap: 8px; align-items: center;
   padding: 8px; background: rgba(31,41,51,.92); backdrop-filter: blur(4px);
 }
-.zbtn { min-width: 44px; height: 38px; border: none; border-radius: 9px; background: #374151; color: #fff; font-size: 20px; line-height: 1; cursor: pointer; }
+.zoom-controls { display: flex; gap: 8px; align-items: center; }
+.tb-spacer { flex: 1 1 auto; }
+.zbtn {
+  min-width: 44px; height: 38px; padding: 0 12px;
+  border: none; border-radius: 9px; background: #374151; color: #fff;
+  font-size: 20px; line-height: 38px; cursor: pointer;
+  /* 버튼 안 글자는 항상 한 줄 */
+  white-space: nowrap; overflow: hidden; text-overflow: clip;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+}
 .zbtn:active { background: #4b5563; }
-.zfit { font-size: 14px; padding: 0 14px; min-width: auto; }
+/* 글자 라벨 버튼(저장·공유): 한 칸 안에 한 줄로 */
+.tbtn { font-size: 15px; font-weight: 600; letter-spacing: -0.2px; min-width: 58px; }
 .zlabel { color: #fff; min-width: 56px; text-align: center; font-size: 14px; }
 .pdf-container { padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; overflow: auto; }
 .pdf-container canvas { box-shadow: 0 1px 4px rgba(0,0,0,.15); background: #fff; }

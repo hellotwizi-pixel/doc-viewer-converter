@@ -48,10 +48,14 @@
       <!-- (b) 렌더 뷰포트 -->
       <section id="view-viewport" class="view" hidden>
         <div id="pdf-toolbar" class="pdf-toolbar" hidden>
-          <button id="zoom-out" class="zbtn" aria-label="축소">−</button>
-          <span id="zoom-label" class="zlabel">100%</span>
-          <button id="zoom-in" class="zbtn" aria-label="확대">+</button>
-          <button id="zoom-fit" class="zbtn zfit">맞춤</button>
+          <div id="zoom-controls" class="zoom-controls">
+            <button id="zoom-out" class="zbtn" aria-label="축소">−</button>
+            <span id="zoom-label" class="zlabel">100%</span>
+            <button id="zoom-in" class="zbtn" aria-label="확대">+</button>
+          </div>
+          <span class="tb-spacer"></span>
+          <button id="download-btn" class="zbtn tbtn" aria-label="저장">저장</button>
+          <button id="share-btn" class="zbtn tbtn" aria-label="공유">공유</button>
         </div>
         <div id="pdf-container" class="pdf-container" hidden></div>
         <article id="docx-container" class="docx-container" hidden></article>
